@@ -132,6 +132,9 @@ public:
 	void update_send();
 
 	EditorAudioBus(EditorAudioBuses *p_buses = nullptr, bool p_is_master = false);
+
+private:
+	int channel_update_delay_counter = 0;
 };
 
 class EditorAudioBusDrop : public Control {

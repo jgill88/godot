@@ -80,7 +80,10 @@ public:
 	void load_config();
 	void update_export_presets();
 	bool poll_export_platforms();
+	bool poll_export_platforms_periodically();
 	void connect_presets_runnable_updated(const Callable &p_target);
 
 	EditorExport();
+private:
+	int poll_delay = 0;
 };

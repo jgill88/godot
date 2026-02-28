@@ -180,6 +180,7 @@ class SceneTreeDock : public VBoxContainer {
 	bool tree_clicked = false;
 
 	VBoxContainer *create_root_dialog = nullptr;
+	bool show_create_root = false;
 	String selected_favorite_root;
 
 	Ref<ShaderMaterial> selected_shader_material;
@@ -280,6 +281,7 @@ class SceneTreeDock : public VBoxContainer {
 
 	void _update_create_root_dialog(bool p_initializing = false);
 	void _favorite_root_selected(const String &p_class);
+	void _update_show_create_root();
 
 	void _feature_profile_changed();
 

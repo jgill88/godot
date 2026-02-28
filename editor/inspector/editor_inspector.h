@@ -114,6 +114,12 @@ private:
 	bool keying = false;
 	bool deletable = false;
 
+	//cached editor settings
+	int base_spacing;
+	bool delimitate_all_container_and_resources;
+	bool sub_inspectors_enabled;
+	ColorationMode nested_color_mode;
+
 	Rect2 right_child_rect;
 	Rect2 bottom_child_rect;
 
@@ -157,6 +163,7 @@ private:
 	GDVIRTUAL1(_set_read_only, bool)
 
 	void _update_flags();
+	void _update_editor_settings();
 
 protected:
 	bool has_borders = false;
@@ -675,6 +682,11 @@ class EditorInspector : public ScrollContainer {
 	//
 
 	LineEdit *search_box = nullptr;
+
+	//cached editor settings
+	bool sub_inspectors_enabled;
+	float initial_refresh_countdown;
+
 	bool show_standard_categories = false;
 	bool show_custom_categories = false;
 	bool hide_script = true;
@@ -721,6 +733,7 @@ class EditorInspector : public ScrollContainer {
 
 	void _edit_set(const String &p_name, const Variant &p_value, bool p_refresh_all, const String &p_changed_field);
 
+	void _update_editor_settings();
 	void _property_changed(const String &p_path, const Variant &p_value, const String &p_name = "", bool p_changing = false, bool p_update_all = false);
 	void _multiple_properties_changed(const Vector<String> &p_paths, const Array &p_values, bool p_changing = false);
 	void _property_keyed(const String &p_path, bool p_advance);

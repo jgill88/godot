@@ -198,7 +198,9 @@ void EditorExport::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_PROCESS: {
-			update_export_presets();
+			//TODO: replaced this with an explicit update_export_presets call
+			// when opening the export dialog.
+			// update_export_presets();
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
@@ -421,6 +423,15 @@ void EditorExport::update_export_presets() {
 	if (export_presets_updated) {
 		emit_signal(_export_presets_updated);
 	}
+}
+
+bool EditorExport::poll_export_platforms_periodically() {
+	if (++poll_delay < 60 * 30) { //only poll this every 30 seconds?
+		return false;
+	}
+
+	poll_delay = 0;
+	return poll_export_platforms();
 }
 
 bool EditorExport::poll_export_platforms() {

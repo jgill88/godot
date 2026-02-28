@@ -449,7 +449,6 @@ void EditorProperty::_notification(int p_what) {
 
 			int ofs = get_theme_constant(SNAME("font_offset"));
 			int text_limit = text_size - ofs;
-			int base_spacing = EDITOR_GET("interface/theme/base_spacing");
 			int padding = base_spacing * EDSCALE;
 			int half_padding = padding / 2;
 
@@ -637,6 +636,12 @@ void EditorProperty::_notification(int p_what) {
 				_update_property_bg();
 			}
 		} break;
+
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			_update_editor_settings();
+			break;
+		}
+
 		case NOTIFICATION_EXIT_TREE: {
 			if (has_borders) {
 				get_parent()->disconnect(SceneStringName(theme_changed), callable_mp(this, &EditorProperty::_update_property_bg));
@@ -652,6 +657,13 @@ void EditorProperty::_notification(int p_what) {
 			}
 		} break;
 	}
+}
+
+void EditorProperty::_update_editor_settings() {
+	base_spacing = EDITOR_GET("interface/theme/base_spacing");
+	nested_color_mode = (ColorationMode)(int)EDITOR_GET("interface/inspector/nested_color_mode");
+	delimitate_all_container_and_resources = EDITOR_GET("interface/inspector/delimitate_all_container_and_resources");
+	sub_inspectors_enabled = EDITOR_GET("interface/inspector/open_resources_in_current_inspector");
 }
 
 void EditorProperty::set_label(const String &p_label) {
@@ -755,8 +767,6 @@ void EditorProperty::_update_property_bg() {
 	begin_bulk_theme_override();
 
 	if (bottom_editor) {
-		ColorationMode nested_color_mode = (ColorationMode)(int)EDITOR_GET("interface/inspector/nested_color_mode");
-		bool delimitate_all_container_and_resources = EDITOR_GET("interface/inspector/delimitate_all_container_and_resources");
 		int count_subinspectors = 0;
 		if (is_colored(nested_color_mode)) {
 			Node *n = this;
@@ -1474,6 +1484,7 @@ EditorProperty::EditorProperty() {
 	bottom_editor = nullptr;
 	menu = nullptr;
 	set_process_shortcut_input(true);
+	_update_editor_settings();
 }
 
 void EditorProperty::_update_popup() {
@@ -3744,7 +3755,6 @@ void EditorInspector::update_tree() {
 	HashMap<String, EditorInspectorSection *> togglable_editor_inspector_sections;
 
 	const Color sscolor = theme_cache.prop_subsection;
-	bool sub_inspectors_enabled = EDITOR_GET("interface/inspector/open_resources_in_current_inspector");
 
 	if (!valid_plugins.is_empty()) {
 		begin_vbox->show();
@@ -5488,7 +5498,7 @@ void EditorInspector::_notification(int p_what) {
 				update_scroll_request = -1;
 			}
 			if (update_tree_pending) {
-				refresh_countdown = float(EDITOR_GET("docks/property_editor/auto_refresh_interval"));
+				refresh_countdown = initial_refresh_countdown;
 			} else if (refresh_countdown > 0) {
 				refresh_countdown -= get_process_delta_time();
 				if (refresh_countdown <= 0) {
@@ -5506,7 +5516,7 @@ void EditorInspector::_notification(int p_what) {
 						S->update_property();
 					}
 
-					refresh_countdown = float(EDITOR_GET("docks/property_editor/auto_refresh_interval"));
+					refresh_countdown = initial_refresh_countdown;
 				}
 			}
 
@@ -5550,10 +5560,16 @@ void EditorInspector::_notification(int p_what) {
 			if (EditorSettings::get_singleton()->check_changed_settings_in_group("interface/inspector")) {
 				update_tree_pending = true;
 			}
+
+			_update_editor_settings();
 		} break;
 	}
 }
-
+void EditorInspector::_update_editor_settings() {
+	initial_refresh_countdown = float(EDITOR_GET("docks/property_editor/auto_refresh_interval"));
+	sub_inspectors_enabled = EDITOR_GET("interface/inspector/open_resources_in_current_inspector");
+}
+	
 void EditorInspector::_changed_callback() {
 	//this is called when property change is notified via notify_property_list_changed()
 	if (object != nullptr) {
@@ -5746,4 +5762,5 @@ EditorInspector::EditorInspector() {
 
 	set_draw_focus_border(true);
 	set_scroll_on_drag_hover(true);
+	_update_editor_settings();
 }

@@ -43,7 +43,7 @@ void EditorRunNative::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_PROCESS: {
-			bool changed = EditorExport::get_singleton()->poll_export_platforms() || first;
+			bool changed = EditorExport::get_singleton()->poll_export_platforms_periodically() || first;
 
 			if (changed) {
 				PopupMenu *popup = remote_debug->get_popup();

@@ -119,6 +119,8 @@ void ProjectExportDialog::_notification(int p_what) {
 }
 
 void ProjectExportDialog::popup_export() {
+	EditorExport::get_singleton()->update_export_presets();
+
 	add_preset->get_popup()->clear();
 	for (int i = 0; i < EditorExport::get_singleton()->get_export_platform_count(); i++) {
 		Ref<EditorExportPlatform> plat = EditorExport::get_singleton()->get_export_platform(i);
