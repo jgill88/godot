@@ -94,6 +94,7 @@ void GDScriptLanguageServer::thread_main(void *p_userdata) {
 }
 
 void GDScriptLanguageServer::start() {
+	return;
 	host = String(_EDITOR_GET("network/language_server/remote_host"));
 	port = (GDScriptLanguageServer::port_override > -1) ? GDScriptLanguageServer::port_override : (int)_EDITOR_GET("network/language_server/remote_port");
 	use_thread = (bool)_EDITOR_GET("network/language_server/use_thread");

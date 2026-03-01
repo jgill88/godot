@@ -143,7 +143,7 @@
 #ifdef MODULE_GDSCRIPT_ENABLED
 #include "modules/gdscript/gdscript.h"
 #if defined(TOOLS_ENABLED) && !defined(GDSCRIPT_NO_LSP)
-#include "modules/gdscript/language_server/gdscript_language_server.h"
+// #include "modules/gdscript/language_server/gdscript_language_server.h"
 #endif // TOOLS_ENABLED && !GDSCRIPT_NO_LSP
 #endif // MODULE_GDSCRIPT_ENABLED
 
@@ -549,7 +549,7 @@ void Main::print_help(const char *p_binary) {
 	print_help_option("--debug-server <uri>", "Start the editor debug server (<protocol>://<host/IP>[:port], e.g. tcp://127.0.0.1:6007)\n", CLI_OPTION_AVAILABILITY_EDITOR);
 	print_help_option("--dap-port <port>", "Use the specified port for the GDScript Debug Adapter Protocol. Recommended port range [1024, 49151].\n", CLI_OPTION_AVAILABILITY_EDITOR);
 #if defined(MODULE_GDSCRIPT_ENABLED) && !defined(GDSCRIPT_NO_LSP)
-	print_help_option("--lsp-port <port>", "Use the specified port for the GDScript Language Server Protocol. Recommended port range [1024, 49151].\n", CLI_OPTION_AVAILABILITY_EDITOR);
+	// print_help_option("--lsp-port <port>", "Use the specified port for the GDScript Language Server Protocol. Recommended port range [1024, 49151].\n", CLI_OPTION_AVAILABILITY_EDITOR);
 #endif // MODULE_GDSCRIPT_ENABLED && !GDSCRIPT_NO_LSP
 #endif
 	print_help_option("--quit", "Quit after the first iteration.\n");
@@ -1847,21 +1847,21 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				OS::get_singleton()->print("Missing <path> argument for --benchmark-file <path>.\n");
 				goto error;
 			}
-#if defined(TOOLS_ENABLED) && defined(MODULE_GDSCRIPT_ENABLED) && !defined(GDSCRIPT_NO_LSP)
-		} else if (arg == "--lsp-port") {
-			if (N) {
-				int port_override = N->get().to_int();
-				if (port_override < 0 || port_override > 65535) {
-					OS::get_singleton()->print("<port> argument for --lsp-port <port> must be between 0 and 65535.\n");
-					goto error;
-				}
-				GDScriptLanguageServer::port_override = port_override;
-				N = N->next();
-			} else {
-				OS::get_singleton()->print("Missing <port> argument for --lsp-port <port>.\n");
-				goto error;
-			}
-#endif // TOOLS_ENABLED && MODULE_GDSCRIPT_ENABLED && !GDSCRIPT_NO_LSP
+// #if defined(TOOLS_ENABLED) && defined(MODULE_GDSCRIPT_ENABLED) && !defined(GDSCRIPT_NO_LSP)
+// 		} else if (arg == "--lsp-port") {
+// 			if (N) {
+// 				int port_override = N->get().to_int();
+// 				if (port_override < 0 || port_override > 65535) {
+// 					OS::get_singleton()->print("<port> argument for --lsp-port <port> must be between 0 and 65535.\n");
+// 					goto error;
+// 				}
+// 				GDScriptLanguageServer::port_override = port_override;
+// 				N = N->next();
+// 			} else {
+// 				OS::get_singleton()->print("Missing <port> argument for --lsp-port <port>.\n");
+// 				goto error;
+// 			}
+// #endif // TOOLS_ENABLED && MODULE_GDSCRIPT_ENABLED && !GDSCRIPT_NO_LSP
 #if defined(TOOLS_ENABLED)
 		} else if (arg == "--dap-port") {
 			if (N) {

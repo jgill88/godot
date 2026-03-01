@@ -79,6 +79,7 @@ void DebugAdapterServer::_notification(int p_what) {
 }
 
 void DebugAdapterServer::start() {
+	return;
 	remote_port = (DebugAdapterServer::port_override > -1) ? DebugAdapterServer::port_override : (int)_EDITOR_GET("network/debug_adapter/remote_port");
 	if (protocol.start(remote_port, IPAddress("127.0.0.1")) == OK) {
 		EditorNode::get_log()->add_message("--- Debug adapter server started on port " + itos(remote_port) + " ---", EditorLog::MSG_TYPE_EDITOR);
