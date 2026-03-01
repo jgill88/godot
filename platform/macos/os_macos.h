@@ -37,8 +37,16 @@
 #import "drivers/coremidi/midi_driver_coremidi.h"
 #include "drivers/unix/os_unix.h"
 #include "servers/audio_server.h"
+#ifdef TOOLS_ENABLED
+#import "display_server_embedded.h"
+#endif
+#import "display_server_macos.h"
 
 class JoypadSDL;
+
+// TODO this is a hack and should be tied to some editor settings.
+#define MAC_EDITOR_FPS 45
+#define MAC_EDITOR_LOW_FPS 5
 
 class OS_MacOS : public OS_Unix {
 #ifdef COREAUDIO_ENABLED
@@ -51,7 +59,6 @@ class OS_MacOS : public OS_Unix {
 	CrashHandler crash_handler;
 
 	List<String> launch_service_args;
-
 	CGFloat _weight_to_ct(int p_weight) const;
 	CGFloat _stretch_to_ct(int p_stretch) const;
 	String _get_default_fontname(const String &p_font_name) const;
@@ -131,6 +138,8 @@ public:
 	virtual Vector<String> get_granted_permissions() const override;
 	virtual void revoke_granted_permissions() override;
 
+	virtual void set_low_processor_usage_mode_sleep_usec(int p_usec) override;
+
 #ifdef TOOLS_ENABLED
 	static bool is_debugger_attached();
 	void wait_for_debugger(uint32_t p_msec);
@@ -156,19 +165,24 @@ class OS_MacOS_NSApp : public OS_MacOS {
 	bool should_terminate = false;
 	bool main_started = false;
 
-	CFRunLoopObserverRef pre_wait_observer = nil;
-
 	void terminate();
+
+	CFRunLoopTimerRef frame_timer = nullptr;
 
 public:
 	void start_main(); // Initializes and runs Godot main loop.
 	void cleanup();
 	bool os_should_terminate() const { return should_terminate; }
 	int get_cmd_argc() const { return argc; }
+	virtual void add_frame_delay(bool p_can_draw, bool p_wake_for_events) override;
 
+	virtual void set_low_processor_usage_mode_sleep_usec(int p_usec) override;
 	virtual void run() override;
 
 	OS_MacOS_NSApp(const char *p_execpath, int p_argc, char **p_argv);
+private:
+	void setup_timer();
+	bool started = false;
 };
 
 class OS_MacOS_Headless : public OS_MacOS {

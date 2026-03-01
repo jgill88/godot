@@ -75,6 +75,10 @@ void OS_MacOS::add_frame_delay(bool p_can_draw, bool p_wake_for_events) {
 	OS_Unix::add_frame_delay(p_can_draw, p_wake_for_events);
 }
 
+void OS_MacOS::set_low_processor_usage_mode_sleep_usec(int p_usec) {
+	OS_Unix::set_low_processor_usage_mode_sleep_usec(p_usec);
+}
+
 void OS_MacOS::initialize() {
 	crash_handler.initialize();
 
@@ -1064,6 +1068,71 @@ static void handle_interrupt(int sig) {
 	}
 }
 
+// frame rate is managed by loop timer
+void OS_MacOS_NSApp::add_frame_delay(bool p_can_draw, bool p_wake_for_events) {}
+
+void OS_MacOS_NSApp::set_low_processor_usage_mode_sleep_usec(int p_usec) {
+	OS_Unix::set_low_processor_usage_mode_sleep_usec(p_usec);
+	// TODO: this seems out of place - but when the editor is focused/unfocused,
+	// the low processor mode sleep value modified to be the editor setting values.
+	// since we are using a loop timer to run each frame, we need to re-create this
+	// timer when this value changes. 
+	setup_timer();
+}
+
+void OS_MacOS_NSApp::setup_timer() {
+	if (!started) return;
+
+	DisplayServer *ds = DisplayServer::get_singleton();
+	DisplayServerMacOS *ds_mac = Object::cast_to<DisplayServerMacOS>(ds);
+	
+	// todo: this is a hack
+	int fps = (get_low_processor_usage_mode_sleep_usec() > 50000 
+			? MAC_EDITOR_LOW_FPS
+			: MAC_EDITOR_FPS
+	);
+	double fr = 1.0/fps;
+
+	if (frame_timer) {
+        CFRunLoopTimerInvalidate(frame_timer);
+        CFRelease(frame_timer);
+        frame_timer = nullptr;
+    }
+
+	frame_timer = CFRunLoopTimerCreateWithHandler(
+		NULL,
+		CFAbsoluteTimeGetCurrent() + fr,
+		fr,
+		0, 
+		0,
+		^(CFRunLoopTimerRef timer) {
+			@autoreleasepool {
+				@try {
+					if (ds_mac) {
+						ds_mac->_process_events(false);
+					} else if (ds) {
+						ds->process_events();
+					}
+
+	#ifdef SDL_ENABLED
+					if (joypad_sdl) {
+						joypad_sdl->process_events();
+					}
+	#endif
+
+					if (Main::iteration() || sig_received) {
+						terminate();
+					}
+				} @catch (NSException *exception) {
+					ERR_PRINT("NSException: " + String::utf8([exception reason].UTF8String));
+				}
+			}
+		}
+	);
+
+	CFRunLoopAddTimer(CFRunLoopGetCurrent(), frame_timer, kCFRunLoopCommonModes);
+}
+
 void OS_MacOS_NSApp::start_main() {
 	Error err;
 	@autoreleasepool {
@@ -1082,35 +1151,9 @@ void OS_MacOS_NSApp::start_main() {
 				@autoreleasepool {
 					main_loop->initialize();
 				}
-				DisplayServer *ds = DisplayServer::get_singleton();
-				DisplayServerMacOS *ds_mac = Object::cast_to<DisplayServerMacOS>(ds);
 
-				pre_wait_observer = CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault, kCFRunLoopBeforeWaiting, true, 0, ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
-					@autoreleasepool {
-						@try {
-							if (ds_mac) {
-								ds_mac->_process_events(false);
-							} else if (ds) {
-								ds->process_events();
-							}
-#ifdef SDL_ENABLED
-							if (joypad_sdl) {
-								joypad_sdl->process_events();
-							}
-#endif
-
-							if (Main::iteration() || sig_received) {
-								terminate();
-							}
-						} @catch (NSException *exception) {
-							ERR_PRINT("NSException: " + String::utf8([exception reason].UTF8String));
-						}
-					}
-					if (wait_timer == nil) {
-						CFRunLoopWakeUp(CFRunLoopGetCurrent()); // Prevent main loop from sleeping.
-					}
-				});
-				CFRunLoopAddObserver(CFRunLoopGetCurrent(), pre_wait_observer, kCFRunLoopCommonModes);
+				started = true;
+				setup_timer();
 				return;
 			}
 		} else {
@@ -1126,11 +1169,11 @@ void OS_MacOS_NSApp::start_main() {
 }
 
 void OS_MacOS_NSApp::terminate() {
-	if (pre_wait_observer) {
-		CFRunLoopRemoveObserver(CFRunLoopGetCurrent(), pre_wait_observer, kCFRunLoopCommonModes);
-		CFRelease(pre_wait_observer);
-		pre_wait_observer = nil;
-	}
+	if (frame_timer) {
+        CFRunLoopTimerInvalidate(frame_timer);
+        CFRelease(frame_timer);
+        frame_timer = nullptr;
+    }
 
 	should_terminate = true;
 	[NSApp terminate:nil];
