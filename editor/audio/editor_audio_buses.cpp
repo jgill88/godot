@@ -159,11 +159,6 @@ void EditorAudioBus::_notification(int p_what) {
 				_update_visible_channels();
 			}
 
-			if (++channel_update_delay_counter < 10) {
-				break;
-			}
-			channel_update_delay_counter = 0;
-
 			for (int i = 0; i < cc; i++) {
 				float real_peak[2] = { -100, -100 };
 				bool activity_found = false;
@@ -188,8 +183,8 @@ void EditorAudioBus::_notification(int p_what) {
 
 				//TODO: this is a heavy operation - hacked in the delay above to get it 
 				// out of the heaviest stack trace 
-				channel[i].vu_l->set_value(channel[i].peak_l);
-				channel[i].vu_r->set_value(channel[i].peak_r);
+				// channel[i].vu_l->set_value(channel[i].peak_l);
+				// channel[i].vu_r->set_value(channel[i].peak_r);
 
 				if (activity_found != channel[i].prev_active) {
 					if (activity_found) {
