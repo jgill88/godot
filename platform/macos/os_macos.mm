@@ -54,24 +54,6 @@
 #include <sys/sysctl.h>
 
 void OS_MacOS::add_frame_delay(bool p_can_draw, bool p_wake_for_events) {
-	if (p_wake_for_events) {
-		uint64_t delay = get_frame_delay(p_can_draw);
-		if (delay == 0) {
-			return;
-		}
-		if (wait_timer) {
-			CFRunLoopTimerInvalidate(wait_timer);
-			CFRelease(wait_timer);
-		}
-		wait_timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + (double(delay) / 1000000.0), 0, 0, 0,
-				^(CFRunLoopTimerRef timer) {
-					CFRunLoopTimerInvalidate(wait_timer);
-					CFRelease(wait_timer);
-					wait_timer = nil;
-				});
-		CFRunLoopAddTimer(CFRunLoopGetCurrent(), wait_timer, kCFRunLoopCommonModes);
-		return;
-	}
 	OS_Unix::add_frame_delay(p_can_draw, p_wake_for_events);
 }
 
@@ -1064,6 +1046,15 @@ static void handle_interrupt(int sig) {
 	}
 }
 
+void OS_MacOS_NSApp::add_frame_delay(bool p_can_draw, bool p_wake_for_events) {
+	if (main_loop_runner) {
+		[main_loop_runner addFrameDelay:p_can_draw wakeForEvents:p_wake_for_events];
+		return;
+	}
+
+	OS_Unix::add_frame_delay(p_can_draw, p_wake_for_events);
+}
+
 void OS_MacOS_NSApp::start_main() {
 	Error err;
 	@autoreleasepool {
@@ -1085,32 +1076,21 @@ void OS_MacOS_NSApp::start_main() {
 				DisplayServer *ds = DisplayServer::get_singleton();
 				DisplayServerMacOS *ds_mac = Object::cast_to<DisplayServerMacOS>(ds);
 
-				pre_wait_observer = CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault, kCFRunLoopBeforeWaiting, true, 0, ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
-					@autoreleasepool {
-						@try {
-							if (ds_mac) {
-								ds_mac->_process_events(false);
-							} else if (ds) {
-								ds->process_events();
-							}
+				main_loop_runner = [[MainLoopRunner alloc]
+							   initWithOS:this
+						withDisplayServer:ds
+						  shouldTerminate:&sig_received
 #ifdef SDL_ENABLED
-							if (joypad_sdl) {
-								joypad_sdl->process_events();
-							}
+							   withJoypad:joypad_sdl
 #endif
+				];
+				if (!main_loop_runner) {
+					_terminate();
+					return;
+				}
 
-							if (Main::iteration() || sig_received) {
-								terminate();
-							}
-						} @catch (NSException *exception) {
-							ERR_PRINT("NSException: " + String::utf8([exception reason].UTF8String));
-						}
-					}
-					if (wait_timer == nil) {
-						CFRunLoopWakeUp(CFRunLoopGetCurrent()); // Prevent main loop from sleeping.
-					}
-				});
-				CFRunLoopAddObserver(CFRunLoopGetCurrent(), pre_wait_observer, kCFRunLoopCommonModes);
+				ds_mac->set_vsync_changed_callback(_vsync_changed, this);
+
 				return;
 			}
 		} else {
@@ -1122,16 +1102,24 @@ void OS_MacOS_NSApp::start_main() {
 		set_exit_code(EXIT_FAILURE);
 	}
 
-	terminate();
+	_terminate();
+}
+void OS_MacOS_NSApp::_unix_add_frame_delay(bool p_can_draw, bool p_wake_for_events) {
+	OS_Unix::add_frame_delay(p_can_draw, p_wake_for_events);
 }
 
-void OS_MacOS_NSApp::terminate() {
-	if (pre_wait_observer) {
-		CFRunLoopRemoveObserver(CFRunLoopGetCurrent(), pre_wait_observer, kCFRunLoopCommonModes);
-		CFRelease(pre_wait_observer);
-		pre_wait_observer = nil;
-	}
+uint64_t OS_MacOS_NSApp::_unix_get_frame_delay(bool p_can_draw) {
+	return OS_Unix::get_frame_delay(p_can_draw);
+}
 
+void OS_MacOS_NSApp::_vsync_changed(void *p_self) {
+	OS_MacOS_NSApp *self = static_cast<OS_MacOS_NSApp *>(p_self);
+
+	ERR_FAIL_COND(!self->main_loop_runner);
+	[self->main_loop_runner createMainLoop];
+}
+
+void OS_MacOS_NSApp::_terminate() {
 	should_terminate = true;
 	[NSApp terminate:nil];
 }

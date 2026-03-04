@@ -37,6 +37,11 @@
 #import "drivers/coremidi/midi_driver_coremidi.h"
 #include "drivers/unix/os_unix.h"
 #include "servers/audio_server.h"
+#ifdef TOOLS_ENABLED
+#import "display_server_embedded.h"
+#endif
+#import "display_server_macos.h"
+#import "main_loop_delegates/main_loop_runner.h"
 
 class JoypadSDL;
 
@@ -67,7 +72,6 @@ protected:
 	JoypadSDL *joypad_sdl = nullptr;
 #endif
 	MainLoop *main_loop = nullptr;
-	CFRunLoopTimerRef wait_timer = nil;
 
 	virtual void initialize_core() override;
 	virtual void initialize() override;
@@ -153,12 +157,10 @@ public:
 
 class OS_MacOS_NSApp : public OS_MacOS {
 	id delegate = nullptr;
+	MainLoopRunner *main_loop_runner = nullptr;
+
 	bool should_terminate = false;
 	bool main_started = false;
-
-	CFRunLoopObserverRef pre_wait_observer = nil;
-
-	void terminate();
 
 public:
 	void start_main(); // Initializes and runs Godot main loop.
@@ -169,6 +171,12 @@ public:
 	virtual void run() override;
 
 	OS_MacOS_NSApp(const char *p_execpath, int p_argc, char **p_argv);
+
+	void _terminate();
+	static void _vsync_changed(void *p_self);
+	virtual void add_frame_delay(bool p_can_draw, bool p_wake_for_events) override;
+	void _unix_add_frame_delay(bool p_can_draw, bool p_wake_for_events);
+	uint64_t _unix_get_frame_delay(bool p_can_draw);
 };
 
 class OS_MacOS_Headless : public OS_MacOS {

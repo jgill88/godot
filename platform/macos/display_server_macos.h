@@ -219,6 +219,10 @@ private:
 	Callable help_search_callback;
 	Callable help_action_callback;
 
+	typedef void (*VSyncChangedCallback)(void *p_self);
+	VSyncChangedCallback vsync_changed_callback = nullptr;
+	void *vsync_changed_callback_ud;
+
 	struct MenuCall {
 		Variant tag;
 		Callable callback;
@@ -304,6 +308,8 @@ public:
 	virtual void help_set_search_callbacks(const Callable &p_search_callback = Callable(), const Callable &p_action_callback = Callable()) override;
 	Callable _help_get_search_callback() const;
 	Callable _help_get_action_callback() const;
+
+	virtual void set_vsync_changed_callback(VSyncChangedCallback p_vsync_changed_callback, void *p_ud);
 
 	virtual bool is_dark_mode_supported() const override;
 	virtual bool is_dark_mode() const override;

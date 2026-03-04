@@ -866,6 +866,11 @@ Callable DisplayServerMacOS::_help_get_action_callback() const {
 	return help_action_callback;
 }
 
+void DisplayServerMacOS::set_vsync_changed_callback(VSyncChangedCallback p_vsync_changed_callback, void *p_ud) {
+	vsync_changed_callback = p_vsync_changed_callback;
+	vsync_changed_callback_ud = p_ud;
+}
+
 bool DisplayServerMacOS::is_dark_mode_supported() const {
 	if (@available(macOS 10.14, *)) {
 		return true;
@@ -2921,6 +2926,8 @@ void DisplayServerMacOS::gl_window_make_current(DisplayServer::WindowID p_window
 
 void DisplayServerMacOS::window_set_vsync_mode(DisplayServer::VSyncMode p_vsync_mode, WindowID p_window) {
 	_THREAD_SAFE_METHOD_
+	bool changed = p_vsync_mode != window_get_vsync_mode(p_window);
+
 #if defined(GLES3_ENABLED)
 	if (gl_manager_angle) {
 		gl_manager_angle->set_use_vsync(p_vsync_mode != DisplayServer::VSYNC_DISABLED);
@@ -2934,6 +2941,11 @@ void DisplayServerMacOS::window_set_vsync_mode(DisplayServer::VSyncMode p_vsync_
 		rendering_context->window_set_vsync_mode(p_window, p_vsync_mode);
 	}
 #endif
+	if (changed) {
+		if (vsync_changed_callback && vsync_changed_callback_ud) {
+			vsync_changed_callback(vsync_changed_callback_ud);
+		}
+	}
 }
 
 DisplayServer::VSyncMode DisplayServerMacOS::window_get_vsync_mode(WindowID p_window) const {
