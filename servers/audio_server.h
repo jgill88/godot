@@ -94,6 +94,7 @@ public:
 	// Virtual API to implement.
 
 	virtual const char *get_name() const = 0;
+	virtual void set_sleep_state(bool p_sleep) {}
 
 	virtual Error init() = 0;
 	virtual void start() = 0;
@@ -515,6 +516,9 @@ public:
 
 	AudioServer();
 	virtual ~AudioServer();
+
+	std::atomic<int> num_playbacks{ 0 };
+	uint64_t last_playback_time_msec;
 };
 
 VARIANT_ENUM_CAST(AudioServer::SpeakerMode)

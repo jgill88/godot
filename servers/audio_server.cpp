@@ -725,6 +725,9 @@ void AudioServer::_delete_stream_playback_list_node(AudioStreamPlaybackListNode 
 		p->stream_playback.unref();
 		delete p;
 	});
+	if (--num_playbacks == 0) {
+		last_playback_time_msec = OS::get_singleton()->get_ticks_msec();
+	}
 }
 
 bool AudioServer::thread_has_channel_mix_buffer(int p_bus, int p_buffer) const {
@@ -1270,6 +1273,8 @@ void AudioServer::start_playback_stream(Ref<AudioStreamPlayback> p_playback, con
 	playback_node->state.store(AudioStreamPlaybackListNode::PLAYING);
 
 	playback_list.insert(playback_node);
+	num_playbacks++;
+	AudioDriver::get_singleton()->set_sleep_state(false);
 }
 
 void AudioServer::stop_playback_stream(Ref<AudioStreamPlayback> p_playback) {
@@ -1618,6 +1623,10 @@ void AudioServer::update() {
 	}
 	bus_details_graveyard.maybe_cleanup();
 	bus_details_graveyard_frame_old.maybe_cleanup();
+
+	if (Engine::get_singleton()->is_editor_hint() && num_playbacks == 0 && last_playback_time_msec < OS::get_singleton()->get_ticks_msec() - 15000) {
+		AudioDriver::get_singleton()->set_sleep_state(true);
+	}
 }
 
 void AudioServer::load_default_bus_layout() {

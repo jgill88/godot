@@ -268,24 +268,56 @@ OSStatus AudioDriverCoreAudio::input_callback(void *inRefCon,
 }
 
 void AudioDriverCoreAudio::start() {
-	if (!active && audio_unit != nullptr) {
+	if (active) {
+		return;
+	}
+
+	if (!sleeping && audio_unit != nullptr) {
 		OSStatus result = AudioOutputUnitStart(audio_unit);
 		if (result != noErr) {
 			ERR_PRINT("AudioOutputUnitStart failed, code: " + itos(result));
 		} else {
 			active = true;
 		}
+	} else {
+		active = true;
 	}
 }
 
+void AudioDriverCoreAudio::set_sleep_state(bool p_sleeping) {
+	if (active && !sleeping && p_sleeping) {
+		OSStatus result = AudioOutputUnitStop(audio_unit);
+		if (result != noErr) {
+			ERR_PRINT("AudioOutputUnitStop failed, code: " + itos(result));
+			return;
+		}
+		WARN_PRINT("sleep audio server, sleep.");
+	}
+	if (active && sleeping && !p_sleeping) {
+		OSStatus result = AudioOutputUnitStart(audio_unit);
+		if (result != noErr) {
+			ERR_PRINT("AudioOutputUnitStart failed, code: " + itos(result));
+			return;
+		}
+		WARN_PRINT("time to wake up, audio server!");
+	}
+	sleeping = p_sleeping;
+}
+
 void AudioDriverCoreAudio::stop() {
-	if (active) {
+	if (!active) {
+		return;
+	}
+
+	if (!sleeping) {
 		OSStatus result = AudioOutputUnitStop(audio_unit);
 		if (result != noErr) {
 			ERR_PRINT("AudioOutputUnitStop failed, code: " + itos(result));
 		} else {
 			active = false;
 		}
+	} else {
+		active = false;
 	}
 }
 
